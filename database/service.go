@@ -10,9 +10,9 @@ import (
 // /service/clear POST
 func ClearAllDatabase(w http.ResponseWriter, r *http.Request) {
 	DB.pool.Exec(`
-		TRUNCATE threads, users, votes, forumusers, forums, posts;
+		TRUNCATE threads, users, votes, forum_users, forums, posts;
 	`)
-	SendResponce(w, 200, []byte("Database cleared successfully!"))
+	sendResponse(w, 200, []byte("Database cleared successfully!"))
 }
 
 // /service/status GET
@@ -33,8 +33,8 @@ func GetStatusDatabase(w http.ResponseWriter, r *http.Request) {
 
 	message, err := json.Marshal(status)
 	if err == nil {
-		makeResponse(w, 200, message)
+		sendResponse(w, 200, message)
 		return
 	}
-	makeResponse(w, 500, []byte(err.Error()))
+	sendResponse(w, 500, []byte(err.Error()))
 }

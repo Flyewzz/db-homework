@@ -6,14 +6,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Flyewzz/db-homework/database"
+	"./database"
 )
 
 func main() {
 
 	database.DB.Connect()
-
-	router := database.CreateRouter()
+	router := database.
 
 	srv := &http.Server{
 		Handler:      router,

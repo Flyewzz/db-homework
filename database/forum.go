@@ -2,7 +2,6 @@ package database
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,8 +17,8 @@ func GetForum(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	slug := params["slug"]
 	forum := models.Forum{} // Create an empty forum
-
-	if err := DB.pool.QueryRow(
+	var err error
+	if err = DB.pool.QueryRow(
 		`SELECT slug, title, "user", posts, threads
 			FROM Forums
 			WHERE slug = $1;`,
@@ -31,17 +30,15 @@ func GetForum(w http.ResponseWriter, r *http.Request) {
 		&forum.Posts,
 		&forum.Threads,
 	); err != nil {
-		forum = nil
-		err = ForumIsNotFound
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find forum with slug: %s"}`, slug)))
+		return
 	}
 	switch err {
 	case nil:
 		message, _ := json.Marshal(forum)
-		SendResponse(w, 200, message)
-	case database.ForumNotFound:
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find forum with slug: %s"}`, slug)))
+		sendResponse(w, 200, message)
 	default:
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
 
@@ -52,18 +49,18 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 	forum := &models.Forum{}
 	err = json.Unmarshal(body, forum)
 
 	if err != nil {
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 
-	err := DB.pool.QueryRow(
+	err = DB.pool.QueryRow(
 		`INSERT INTO Forums (slug, title, "user")
 		VALUES ($1, $2, (
 			SELECT nickname FROM Users WHERE nickname = $3
@@ -78,19 +75,19 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 	switch ErrorCode(err) {
 	case pgxStatusOk:
 		message, _ := json.Marshal(forum)
-		SendResponse(w, 201, message)
+		sendResponse(w, 201, message)
 	case pgxStatusErrorUnique:
 		message, _ := json.Marshal(forum)
-		SendResponse(w, 409, message)
+		sendResponse(w, 409, message)
 	case pgxStatusErrorNotNull:
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, forum.User)))
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, forum.User)))
 	default:
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
 
 // /forum/{slug}/users GET
-func GetForumUsers(w http.ResponseWriter, r *http.Request) {
+func Getforum_users(w http.ResponseWriter, r *http.Request) {
 	// (slug, limit, since, desc string) (*[]*models.User, error)
 	params := mux.Vars(r)
 	slug := params["slug"]
@@ -121,7 +118,7 @@ func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	results, err := DB.pool.Query(query, slug, limit, since)
 	if err != nil {
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
 	}
 	defer results.Close()
 	var users []*models.User
@@ -140,11 +137,11 @@ func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	case nil:
 		message, _ := swag.WriteJSON(users) // можно через easyjson, но мне лень было
-		SendResponse(w, 200, message)
+		sendResponse(w, 200, message)
 	case ForumIsNotFound:
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
 	default:
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
 
@@ -157,7 +154,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 	thread := &models.Thread{}
@@ -165,7 +162,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	thread.Forum = slug // иначе не знаю как
 
 	if err != nil {
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 
@@ -174,7 +171,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	// Thread not exists
-	err := DB.pool.QueryRow(
+	err = DB.pool.QueryRow(
 		`INSERT INTO threads (author, created, message, title, slug, forum)
 		 VALUES ($1, $2, $3, $4, $5, (SELECT slug FROM forums where slug = $6))
 		 RETURNING author, created, forum, id, message, title;
@@ -195,27 +192,23 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	)
 	switch ErrorCode(err) {
 	case pgxStatusOk:
-		return thread, nil
+		message, _ := json.Marshal(thread)
+		sendResponse(w, 201, message)
+		return
 	case pgxStatusErrorWithForeignKey:
 		fallthrough
 	case pgxStatusErrorNotNull:
-		thread = nil
-		err = errors.New("Author/Forum is not found")
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
 	default:
 		thread = nil
 	}
 
 	switch err {
-	case nil:
-		message, _ := json.MarshalJSON(thread)
-		SendResponse(w, 201, message)
-	case ForumOrAuthorIsNotFound:
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
 	case ThreadIsExist:
-		message, _ := json.MarshalJSON(thread)
-		SendResponse(w, 409, message)
+		message, _ := json.Marshal(thread)
+		sendResponse(w, 409, message)
 	default:
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 
 }
@@ -247,7 +240,7 @@ func GetForumThreads(w http.ResponseWriter, r *http.Request) {
 	results, err := DB.pool.Query(query, slug, limit, since)
 	var threads []*models.Thread
 	if err != nil {
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find forum with slug: %s"}`, slug)))
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find forum with slug: %s"}`, slug)))
 		return
 	}
 	defer results.Close()
@@ -270,10 +263,10 @@ func GetForumThreads(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	case nil:
 		message, _ := swag.WriteJSON(threads)
-		SendResponse(w, 200, message)
+		sendResponse(w, 200, message)
 	case ForumIsNotFound:
-		SendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find forum with slug: %s"}`, slug)))
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find forum with slug: %s"}`, slug)))
 	default:
-		SendResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
