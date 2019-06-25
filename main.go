@@ -13,7 +13,7 @@ func main() {
 
 	database.DB.Connect()
 
-	router := handlers.CreateRouter()
+	router := database.CreateRouter()
 
 	srv := &http.Server{
 		Handler:      router,
