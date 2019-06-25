@@ -11,6 +11,6 @@ type Post struct {
 	Id       int       `json:"id,omitempty"`
 	IsEdited bool      `json:"isEdited,omitempty"`
 	Message  string    `json:"message"`
-	Parent   int       `json:"parent,omitempty"`
+	Parent   int64     `json:"parent,omitempty"`
 	Thread   int       `json:"thread,omitempty"`
 }

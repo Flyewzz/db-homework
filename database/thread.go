@@ -23,6 +23,59 @@ func slugIsNumber(slug string) bool {
 	return true
 }
 
+func checkPost(p *models.Post, t *models.Thread) error {
+	if func(nickname string) bool {
+		var user models.User
+		err := DB.pool.QueryRow(
+			`SELECT "nickname", "fullname", "email", "about"
+			FROM users
+			WHERE "nickname" = $1`,
+			nickname,
+		).Scan(
+			&user.Nickname,
+			&user.Fullname,
+			&user.About,
+			&user.Email,
+		)
+
+		if err != nil && err.Error() == noRowsInResult {
+			return true
+		}
+		return false
+	}(p.Author) {
+		return UserIsNotFound
+	}
+	if func(parent int64, threadID int32) bool {
+		var t int64
+		err := DB.pool.QueryRow(`
+		SELECT id
+		FROM posts
+		WHERE id = $1 AND thread IN (SELECT id FROM threads WHERE thread <> $2)`,
+			parent,
+			threadID).Scan(&t)
+
+		if err != nil && err.Error() == noRowsInResult {
+			return false
+		}
+		return true
+	}(p.Parent, t.Id) || func(parent int64) bool {
+		if parent == 0 {
+			return false
+		}
+
+		var t int64
+		err := DB.pool.QueryRow(`SELECT id FROM posts WHERE id = $1`, parent).Scan(&t)
+
+		if err != nil {
+			return true
+		}
+		return false
+	}(p.Parent) {
+		return PostParentIsNotFound
+	}
+	return nil
+}
+
 func GetThreadFromDatabase(slug string) (*models.Thread, error) {
 	thread := &models.Thread{}
 
@@ -62,6 +115,66 @@ func GetThreadFromDatabase(slug string) (*models.Thread, error) {
 			return nil, errors.New("Thread is not found")
 		}
 		return thread, nil
+	}
+}
+
+// /thread/{slug_or_id}/details Получение информации о ветке обсуждения
+func GetThread(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	slug := params["slug_or_id"]
+
+	thread := &models.Thread{}
+	var err error
+
+	if slugIsNumber(slug) {
+		id, _ := strconv.Atoi(slug)
+		if err = DB.pool.QueryRow(
+			`SELECT author, created, forum, id, message, slug, title, votes
+			FROM Threads
+			WHERE id = $1::INTEGER;`, id).Scan(
+			&thread.Author,
+			&thread.Created,
+			&thread.Forum,
+			&thread.Id,
+			&thread.Message,
+			&thread.Slug,
+			&thread.Title,
+			&thread.Votes,
+		); err != nil {
+			sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find thread by slug: %s"}`, slug)))
+			return
+		}
+		message, _ := json.Marshal(thread)
+		sendResponse(w, 200, message)
+	} else {
+		// slug is string
+		if err = DB.pool.QueryRow(
+			`SELECT author, created, forum, id, message, slug, title, votes
+			FROM Threads
+			WHERE slug = $1::TEXT;`, slug).Scan(
+			&thread.Author,
+			&thread.Created,
+			&thread.Forum,
+			&thread.Id,
+			&thread.Message,
+			&thread.Slug,
+			&thread.Title,
+			&thread.Votes,
+		); err != nil {
+			sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find thread by slug: %s"}`, slug)))
+			return
+		}
+		// return thread, nil
+	}
+
+	switch err {
+	case nil:
+		message, _ := json.Marshal(thread)
+		sendResponse(w, 200, message)
+	case ThreadIsNotFound:
+		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find thread by slug: %s"}`, slug)))
+	default:
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
 
