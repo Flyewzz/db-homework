@@ -9,7 +9,7 @@ RUN apt-get update && \
 
 # Clone the project
 USER root
-RUN git clone https://github.com/Flyewzz/db-homework.git # рекомендую каждый раз менять этот коммент, дабы избежать кеширования
+RUN git clone https://github.com/Flyewzz/db-homework.git
 WORKDIR db-homework
 
 # Install PostgreSQL
@@ -27,10 +27,10 @@ RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
     createdb -O docker docker &&\
     psql -d docker -c "CREATE EXTENSION IF NOT EXISTS citext;" &&\
-    psql docker -a -f  database/sql/init.sql &&\
+    psql docker -a -f  database/work_schema.sql &&\
     /etc/init.d/postgresql stop
 
-RUN cat database/sql/init.sql
+RUN cat database/work_schema.sql
 
 USER root
 # Database and network

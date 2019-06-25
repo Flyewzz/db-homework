@@ -41,9 +41,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		&user.About,
 	)
 
-	var users *models.Users
-	if rows.RowsAffected() == 0 {
-		users = &models.Users{}
+	var users models.Users
+	if results.RowsAffected() == 0 {
+		users = models.Users{}
 		queryRows, err := DB.pool.Query(
 			`SELECT "nickname", "fullname", "email", "about"
 			 FROM users
@@ -65,6 +65,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		}
 		message, _ := swag.WriteJSON(users)
 		sendResponse(w, 409, message)
+		return
 	}
 
 	switch err {
@@ -114,7 +115,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		if ErrorCode(err) != pgxOK {
+		if ErrorCode(err) != "" {
 			sendResponse(w, 409, []byte(fmt.Sprintf(`{"message": "This email is already registered by user: %s"}`, nickname)))
 			return
 		}

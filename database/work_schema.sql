@@ -81,10 +81,10 @@ DROP INDEX IF EXISTS idx_posts_thread_path;
 DROP INDEX IF EXISTS idx_posts_thread_id_created;
 DROP INDEX IF EXISTS idx_votes_thread_nickname;
 
-DROP INDEX IF EXISTS idx_fu_user;
+-- DROP INDEX IF EXISTS idx_fu_user;
 DROP INDEX IF EXISTS idx_fu_forum;
 
-CREATE INDEX IF NOT EXISTS idx_fu_user ON forum_users (forum, forum_user);
+-- CREATE INDEX IF NOT EXISTS idx_fu_user ON forum_users (forum, forum_user);
 CREATE INDEX IF NOT EXISTS idx_fu_forum ON forum_users (forum);
 
 CREATE INDEX IF NOT EXISTS idx_users_nickname ON users (nickname);
