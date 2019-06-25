@@ -136,7 +136,7 @@ func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 
 	switch err {
 	case nil:
-		message, _ := swag.WriteJSON(users) // можно через easyjson, но мне лень было
+		message, _ := swag.WriteJSON(users)
 		sendResponse(w, 200, message)
 	case ForumIsNotFound:
 		sendResponse(w, 404, []byte(fmt.Sprintf(`{"message": "Can't find user by nickname: %s"}`, slug)))
