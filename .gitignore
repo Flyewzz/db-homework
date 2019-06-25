@@ -1,0 +1,6 @@
+*.out
+*.gz
+*.app
+.vscode
+go.sum
+report.html

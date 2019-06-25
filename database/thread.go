@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/Flyewzz/db-homework/models"
 	"github.com/go-openapi/swag"
@@ -178,73 +176,72 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func CreatePostsOnThreadDatabase(slug string, posts []*models.Post) ([]*models.Post, error) {
-	thread, err := GetThreadFromDatabase(slug)
-	if err != nil {
-		return nil, err
-	}
-	dateTimeTemplate := "2000-01-01 12:00:00"
-	dateTimeCreated := time.Now().Format(dateTimeTemplate)
-	query := strings.Builder{}
-	query.WriteString("INSERT INTO posts (author, created, message, thread, parent, forum, path) VALUES ")
-	queryBody := "('%s', '%s', '%s', %d, %d, '%s', (SELECT  FROM posts WHERE id = %d) || (SELECT last_value FROM posts_id_seq)),"
-	for i, post := range *posts {
-		err = checkPost(post, thread)
-		if err != nil {
-			return nil, err
-		}
+// func CreatePostsOnThreadDatabase(slug string, posts []*models.Post) ([]*models.Post, error) {
+// 	thread, err := GetThreadFromDatabase(slug)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	dateTimeTemplate := "2000-01-01 12:00:00"
+// 	dateTimeCreated := time.Now().Format(dateTimeTemplate)
+// 	query := strings.Builder{}
+// 	query.WriteString("INSERT INTO posts (author, created, message, thread, parent, forum, path) VALUES ")
+// 	queryBody := "('%s', '%s', '%s', %d, %d, '%s', (SELECT  FROM posts WHERE id = %d) || (SELECT last_value FROM posts_id_seq)),"
+// 	for i, post := range *posts {
+// 		err = checkPost(post, thread)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		temp := fmt.Sprintf(queryBody, post.Author, created, post.Message, thread.Id, post.Parent, thread.Forum, post.Parent)
-		if i == postsNumber-1 {
-			temp = temp[:len(temp)-1]
-		}
-		query.WriteString(temp)
-	}
-	query.WriteString("RETURNING author, created, forum, id, message, parent, thread")
+// 		temp := fmt.Sprintf(queryBody, post.Author, created, post.Message, thread.Id, post.Parent, thread.Forum, post.Parent)
+// 		if i == postsNumber-1 {
+// 			temp = temp[:len(temp)-1]
+// 		}
+// 		query.WriteString(temp)
+// 	}
+// 	query.WriteString("RETURNING author, created, forum, id, message, parent, thread")
 
-	tx, txErr := DB.pool.Begin()
-	if txErr != nil {
-		return nil, txErr
-	}
-	defer tx.Rollback()
+// 	tx, txErr := DB.pool.Begin()
+// 	if txErr != nil {
+// 		return nil, txErr
+// 	}
+// 	defer tx.Rollback()
 
-	rows, err := tx.Query(query.String())
-	defer rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	insertPosts := models.Posts{}
-	for rows.Next() {
-		post := models.Post{}
-		rows.Scan(
-			&post.Author,
-			&post.Created,
-			&post.Forum,
-			&post.ID,
-			&post.Message,
-			&post.Parent,
-			&post.Thread,
-		)
-		insertPosts = append(insertPosts, &post)
-	}
-	err = rows.Err()
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
+// 	rows, err := tx.Query(query.String())
+// 	defer rows.Close()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	insertPosts := models.Posts{}
+// 	for rows.Next() {
+// 		post := models.Post{}
+// 		rows.Scan(
+// 			&post.Author,
+// 			&post.Created,
+// 			&post.Forum,
+// 			&post.ID,
+// 			&post.Message,
+// 			&post.Parent,
+// 			&post.Thread,
+// 		)
+// 		insertPosts = append(insertPosts, &post)
+// 	}
+// 	err = rows.Err()
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		return nil, err
+// 	}
 
-	// по хорошему это впихнуть в хранимые процедуры, но нормальные ребята предпочитают костылить
-	tx.Exec(`UPDATE forums SET posts = posts + $1 WHERE slug = $2`, len(insertPosts), thread.Forum)
-	for _, p := range insertPosts {
-		tx.Exec(`INSERT INTO forum_users VALUES ($1, $2) ON CONFLICT DO NOTHING`, p.Author, p.Forum)
-	}
+// 	tx.Exec(`UPDATE forums SET posts = posts + $1 WHERE slug = $2`, len(insertPosts), thread.Forum)
+// 	for _, p := range insertPosts {
+// 		tx.Exec(`INSERT INTO forum_users VALUES ($1, $2) ON CONFLICT DO NOTHING`, p.Author, p.Forum)
+// 	}
 
-	tx.Commit()
+// 	tx.Commit()
 
-	return &insertPosts, nil
-}
+// 	return &insertPosts, nil
+// }
 
-// /thread/{slug_or_id}/create Создание новых постов
+// /thread/{slug_or_id}/create POST
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println("/thread/{slug_or_id}/create")
 	params := mux.Vars(r)
@@ -253,13 +250,13 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		makeResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 	posts := &models.Posts{}
 	err = json.Unmarshal(body, &posts)
 	if err != nil {
-		makeResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 
@@ -269,15 +266,15 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	switch err {
 	case nil:
-		makeResponse(w, 201, resp)
-	case database.ThreadNotFound:
-		makeResponse(w, 404, []byte(makeErrorThreadID(param)))
-	case database.UserNotFound:
-		makeResponse(w, 404, []byte(makeErrorPostAuthor(param)))
-	case database.PostParentNotFound:
-		makeResponse(w, 409, []byte(makeErrorThreadConflict()))
+		sendResponse(w, 201, resp)
+	case database.ThreadIsNotFound:
+		sendResponse(w, 404, []byte(makeErrorThreadID(param)))
+	case database.UserIsNotFound:
+		sendResponse(w, 404, []byte(makeErrorPostAuthor(param)))
+	case database.PostParentIsNotFound:
+		sendResponse(w, 409, []byte(makeErrorThreadConflict()))
 	default:
-		makeResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
 
@@ -303,11 +300,11 @@ func GetThreadPosts(w http.ResponseWriter, r *http.Request) {
 	resp, _ := swag.WriteJSON(result)
 	switch err {
 	case nil:
-		makeResponse(w, 200, resp)
+		sendResponse(w, 200, resp)
 	case database.ForumNotFound:
-		makeResponse(w, 404, []byte(makeErrorThread(param)))
+		sendResponse(w, 404, []byte(makeErrorThread(param)))
 	default:
-		makeResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }
 
@@ -318,7 +315,7 @@ func MakeThreadVote(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		makeResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
 	vote := &models.Vote{}
@@ -329,12 +326,12 @@ func MakeThreadVote(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	case nil:
 		resp, _ := result.MarshalJSON()
-		makeResponse(w, 200, resp)
+		sendResponse(w, 200, resp)
 	case database.ForumNotFound:
-		makeResponse(w, 404, []byte(makeErrorThread(param)))
+		sendResponse(w, 404, []byte(makeErrorThread(param)))
 	case database.UserNotFound:
-		makeResponse(w, 404, []byte(makeErrorUser(param)))
+		sendResponse(w, 404, []byte(makeErrorUser(param)))
 	default:
-		makeResponse(w, 500, []byte(err.Error()))
+		sendResponse(w, 500, []byte(err.Error()))
 	}
 }

@@ -14,7 +14,7 @@ func CreateRouter() *mux.Router {
 	r.HandleFunc("/api/forum/{slug}/create", CreateForumThread).Methods("POST")
 	r.HandleFunc("/api/forum/{slug}/details", GetForum).Methods("GET")
 	r.HandleFunc("/api/forum/{slug}/threads", GetForumThreads).Methods("GET")
-	r.HandleFunc("/api/forum/{slug}/users", Getforum_users).Methods("GET")
+	r.HandleFunc("/api/forum/{slug}/users", GetForumUsers).Methods("GET")
 	r.HandleFunc("/api/user/{nickname}/create", CreateUser).Methods("POST")
 	r.HandleFunc("/api/user/{nickname}/profile", GetUser).Methods("GET")
 	r.HandleFunc("/api/user/{nickname}/profile", UpdateUser).Methods("POST")

@@ -87,7 +87,7 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 }
 
 // /forum/{slug}/users GET
-func Getforum_users(w http.ResponseWriter, r *http.Request) {
+func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 	// (slug, limit, since, desc string) (*[]*models.User, error)
 	params := mux.Vars(r)
 	slug := params["slug"]
