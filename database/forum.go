@@ -186,7 +186,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 		&thread.Author,
 		&thread.Created,
 		&thread.Forum,
-		&thread.Id,
+		&thread.ID,
 		&thread.Message,
 		&thread.Title,
 	)
@@ -250,7 +250,7 @@ func GetForumThreads(w http.ResponseWriter, r *http.Request) {
 			&thread.Author,
 			&thread.Created,
 			&thread.Forum,
-			&thread.Id,
+			&thread.ID,
 			&thread.Message,
 			&thread.Slug,
 			&thread.Title,

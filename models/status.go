@@ -1,8 +1,8 @@
 package models
 
 type Status struct {
-	Forum  int `json:"forum"`
-	Post   int `json:"post"`
-	Thread int `json:"thread"`
-	User   int `json:"user"`
+	Forum int32 `json:"forum"`
+	Post int64 `json:"post"`
+	Thread int32 `json:"thread"`
+	User int32 `json:"user"`
 }

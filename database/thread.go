@@ -58,7 +58,7 @@ func checkPost(p *models.Post, t *models.Thread) error {
 			return false
 		}
 		return true
-	}(p.Parent, t.Id) || func(parent int64) bool {
+	}(p.Parent, t.ID) || func(parent int64) bool {
 		if parent == 0 {
 			return false
 		}
@@ -88,7 +88,7 @@ func GetThreadFromDatabase(slug string) (*models.Thread, error) {
 			&thread.Author,
 			&thread.Created,
 			&thread.Forum,
-			&thread.Id,
+			&thread.ID,
 			&thread.Message,
 			&thread.Slug,
 			&thread.Title,
@@ -106,7 +106,7 @@ func GetThreadFromDatabase(slug string) (*models.Thread, error) {
 			&thread.Author,
 			&thread.Created,
 			&thread.Forum,
-			&thread.Id,
+			&thread.ID,
 			&thread.Message,
 			&thread.Slug,
 			&thread.Title,
@@ -135,7 +135,7 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 			&thread.Author,
 			&thread.Created,
 			&thread.Forum,
-			&thread.Id,
+			&thread.ID,
 			&thread.Message,
 			&thread.Slug,
 			&thread.Title,
@@ -155,7 +155,7 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 			&thread.Author,
 			&thread.Created,
 			&thread.Forum,
-			&thread.Id,
+			&thread.ID,
 			&thread.Message,
 			&thread.Slug,
 			&thread.Title,
@@ -215,7 +215,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		&threadUpdate.Title,
 		&threadUpdate.Message,
 	).Scan(
-		&updatedThread.Id,
+		&updatedThread.ID,
 		&updatedThread.Title,
 		&updatedThread.Author,
 		&updatedThread.Forum,
@@ -253,7 +253,7 @@ func CreatePostsOnThreadDatabase(slug string, posts *[]*models.Post) (*[]*models
 				&thread.Author,
 				&thread.Created,
 				&thread.Forum,
-				&thread.Id,
+				&thread.ID,
 				&thread.Message,
 				&thread.Slug,
 				&thread.Title,
@@ -271,7 +271,7 @@ func CreatePostsOnThreadDatabase(slug string, posts *[]*models.Post) (*[]*models
 				&thread.Author,
 				&thread.Created,
 				&thread.Forum,
-				&thread.Id,
+				&thread.ID,
 				&thread.Message,
 				&thread.Slug,
 				&thread.Title,
@@ -302,7 +302,7 @@ func CreatePostsOnThreadDatabase(slug string, posts *[]*models.Post) (*[]*models
 			return nil, err
 		}
 
-		temp := fmt.Sprintf(queryBody, post.Author, dateTimeCreated, post.Message, thread.Id, post.Parent, thread.Forum, post.Parent)
+		temp := fmt.Sprintf(queryBody, post.Author, dateTimeCreated, post.Message, thread.ID, post.Parent, thread.Forum, post.Parent)
 		if i == postsNumber-1 {
 			temp = temp[:len(temp)-1]
 		}
@@ -328,7 +328,7 @@ func CreatePostsOnThreadDatabase(slug string, posts *[]*models.Post) (*[]*models
 			&post.Author,
 			&post.Created,
 			&post.Forum,
-			&post.Id,
+			&post.ID,
 			&post.Message,
 			&post.Parent,
 			&post.Thread,
@@ -407,7 +407,7 @@ func getPosts(slug, limit, since, sort, desc string) (*[]*models.Post, error) {
 							WHERE p.thread = $1 and p.path[1] IN (
 								SELECT p2.path[1]
 								FROM posts p2
-								WHERE p2.thread = $1 AND p2.parent = 0 and p2.path[1] < (SELECT p3.path[1] from posts p3 where p3.id = $2)
+								WHERE p2.thread = $1 AND p2.parent = 0 and p2.path[1] < (SELECT p3.path[1] from posts p3 where p3.ID = $2)
 								ORDER BY p2.path DESC
 								LIMIT $3
 							)
@@ -429,7 +429,7 @@ func getPosts(slug, limit, since, sort, desc string) (*[]*models.Post, error) {
 							WHERE p.thread = $1 and p.path[1] IN (
 								SELECT p2.path[1]
 								FROM posts p2
-								WHERE p2.thread = $1 AND p2.parent = 0 and p2.path[1] > (SELECT p3.path[1] from posts p3 where p3.id = $2::TEXT::INTEGER)
+								WHERE p2.thread = $1 AND p2.parent = 0 and p2.path[1] > (SELECT p3.path[1] from posts p3 where p3.ID = $2::TEXT::INTEGER)
 								ORDER BY p2.path
 								LIMIT $3::TEXT::INTEGER
 							)
@@ -492,10 +492,10 @@ func getPosts(slug, limit, since, sort, desc string) (*[]*models.Post, error) {
 	}
 	if since != "" {
 		query := queryPostsWithSience[desc][sort]
-		rows, err = DB.pool.Query(query, thread.Id, since, limit)
+		rows, err = DB.pool.Query(query, thread.ID, since, limit)
 	} else {
 		query := queryPostsWithNoSience[desc][sort]
-		rows, err = DB.pool.Query(query, thread.Id, limit)
+		rows, err = DB.pool.Query(query, thread.ID, limit)
 	}
 	defer rows.Close()
 
@@ -508,7 +508,7 @@ func getPosts(slug, limit, since, sort, desc string) (*[]*models.Post, error) {
 		post := models.Post{}
 
 		err = rows.Scan(
-			&post.Id,
+			&post.ID,
 			&post.Author,
 			&post.Parent,
 			&post.Message,
@@ -583,7 +583,7 @@ func MakeThreadVote(w http.ResponseWriter, r *http.Request) {
 		if slugIsNumber(param) {
 			id, _ := strconv.Atoi(param)
 			err = tx.QueryRow(`SELECT id, author, created, forum, message, slug, title, votes FROM threads WHERE id = $1`, id).Scan(
-				&thread.Id,
+				&thread.ID,
 				&thread.Author,
 				&thread.Created,
 				&thread.Forum,
@@ -594,7 +594,7 @@ func MakeThreadVote(w http.ResponseWriter, r *http.Request) {
 			)
 		} else {
 			err = tx.QueryRow(`SELECT id, author, created, forum, message, slug, title, votes FROM threads WHERE slug = $1`, param).Scan(
-				&thread.Id,
+				&thread.ID,
 				&thread.Author,
 				&thread.Created,
 				&thread.Forum,
@@ -614,16 +614,16 @@ func MakeThreadVote(w http.ResponseWriter, r *http.Request) {
 			return nil, UserIsNotFound
 		}
 
-		rows, err := tx.Exec(`UPDATE votes SET voice = $1 WHERE thread = $2 AND nickname = $3;`, vote.Voice, thread.Id, vote.Nickname)
+		rows, err := tx.Exec(`UPDATE votes SET voice = $1 WHERE thread = $2 AND nickname = $3;`, vote.Voice, thread.ID, vote.Nickname)
 		if rows.RowsAffected() == 0 {
-			_, err := tx.Exec(`INSERT INTO votes (nickname, thread, voice) VALUES ($1, $2, $3);`, vote.Nickname, thread.Id, vote.Voice)
+			_, err := tx.Exec(`INSERT INTO votes (nickname, thread, voice) VALUES ($1, $2, $3);`, vote.Nickname, thread.ID, vote.Voice)
 			if err != nil {
 				return nil, UserIsNotFound
 			}
 		}
 		// если возник вопрос - в какой мемент делаем +1 к voice -> смотри init.sql
 
-		err = tx.QueryRow(`SELECT votes FROM threads WHERE id = $1`, thread.Id).Scan(&thread.Votes)
+		err = tx.QueryRow(`SELECT votes FROM threads WHERE id = $1`, thread.ID).Scan(&thread.Votes)
 		if err != nil {
 			return nil, err
 		}

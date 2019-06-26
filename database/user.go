@@ -23,13 +23,12 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := &models.User{}
-	err = json.Unmarshal(body, &user)
-	user.Nickname = nickname
-
+	err = json.Unmarshal(body, user)
 	if err != nil {
 		sendResponse(w, 500, []byte(err.Error()))
 		return
 	}
+	user.Nickname = nickname
 
 	results, err := DB.pool.Exec(
 		`INSERT
@@ -40,10 +39,12 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		&user.Email,
 		&user.About,
 	)
-
-	var users models.Users
+	if err != nil {
+		sendResponse(w, 500, []byte(err.Error()))
+		return
+	}
 	if results.RowsAffected() == 0 {
-		users = models.Users{}
+		users := models.Users{}
 		queryRows, err := DB.pool.Query(
 			`SELECT "nickname", "fullname", "email", "about"
 			 FROM users
@@ -63,18 +64,19 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 			queryRows.Scan(&user.Nickname, &user.Fullname, &user.Email, &user.About)
 			users = append(users, &user)
 		}
-		message, _ := swag.WriteJSON(users)
+		message, _ := swag.WriteJSON(&users)
 		sendResponse(w, 409, message)
 		return
 	}
 
-	switch err {
-	case nil:
-		message, _ := swag.WriteJSON(user)
-		sendResponse(w, 201, message)
-	default:
-		sendResponse(w, 500, []byte(err.Error()))
-	}
+	user = nil
+	// switch err {
+	// case nil:
+	message, _ := swag.WriteJSON(user)
+	sendResponse(w, 201, message)
+	// default:
+	// 	sendResponse(w, 500, []byte(err.Error()))
+	// }
 }
 
 // /user/{nickname}/profile POST

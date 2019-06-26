@@ -2,5 +2,5 @@ package models
 
 type Vote struct {
 	Nickname string `json:"nickname"`
-	Voice    int    `json:"voice"`
+	Voice int32 `json:"voice"`
 }

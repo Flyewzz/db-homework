@@ -79,7 +79,7 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 						WHERE id = $1`,
 						id,
 					).Scan(
-						&thread.Id,
+						&thread.ID,
 						&thread.Title,
 						&thread.Author,
 						&thread.Forum,
@@ -95,7 +95,7 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 						WHERE slug = $1`,
 						param,
 					).Scan(
-						&thread.Id,
+						&thread.ID,
 						&thread.Title,
 						&thread.Author,
 						&thread.Forum,

@@ -1,10 +1,13 @@
 package models
 
+
+import (
+	strfmt "github.com/go-openapi/strfmt"
+)
+
 type User struct {
-	About    string `json:"about,omitempty"`
-	Email    string `json:"email"`
+	About string `json:"about,omitempty"`
+	Email strfmt.Email `json:"email"`
 	Fullname string `json:"fullname"`
 	Nickname string `json:"nickname,omitempty"`
 }
-
-type Users []*User
