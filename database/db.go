@@ -14,9 +14,9 @@ func (db *DataBase) Connect() error {
 	conConfig := pgx.ConnConfig{
 		Host:      "127.0.0.1",
 		Port:      5432,
-		Database:  "forumdb",
-		User:      "postgres",
-		Password:  "postgres",
+		Database:  "docker",
+		User:      "docker",
+		Password:  "docker",
 		TLSConfig: nil,
 	}
 
